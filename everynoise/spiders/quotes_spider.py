@@ -7,10 +7,18 @@ class ReleasesSpider(scrapy.Spider):
     start_urls = ['http://everynoise.com/new_releases_by_genre.cgi?genre=anygenre&region=US']
 
     def parse(self, response):
-        # for albumrow in response.css('div.albumrow'):
-        for albumrow in response.xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "albumrow", " " ))]'):
+        for albumrow in response.css('div.albumrow'):
+            # If a:nth-child(3) contains no text, then the album name is in the child i
+            if albumrow.css('a:nth-child(3)::text').get() == None:
+                albumName = albumrow.css('a > i::text').get()
+            else:
+                albumName = albumrow.css('a:nth-child(3)::text').get()
+
             yield {
-                'trackid': albumrow.xpath('//b').getall(),
-                # 'author': album.css('small.author::text').get(),
-                'artistid': albumrow.xpath('//a+//a').get(),
+                'trackId': albumrow.css('span.play::attr(trackid)').get(),
+                'artistId': albumrow.css('a::attr(href)').extract()[0],
+                'rank': albumrow.css('a::attr(title)').extract()[0],
+                'artistName': albumrow.css('a > b::text').get(),
+                'albumId': albumrow.css('a::attr(href)').extract()[1],
+                'albumName': albumName,
             }
