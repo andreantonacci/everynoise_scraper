@@ -108,3 +108,4 @@ venv.bak/
 
 # temp directories
 html_dumbs/
+*JSON
