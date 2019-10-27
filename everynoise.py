@@ -6,15 +6,35 @@ import time
 from datetime import datetime
 import os
 from urllib.parse import parse_qs, urlparse
+import boto3
+import logging
 
-directory = 'html_dumbs'
-try:
-    os.stat(directory)
-except:
-    os.mkdir(directory)    
+# enable logging
+logging.basicConfig(level=logging.INFO, filename="everynoise_newreleases_logs.log", filemode="a", format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
-runUnix = int(time.time())
-runDate = datetime.now().strftime("%Y%m%d")
+
+# function to backup on S3
+def uploadToS3(filepath, filename):
+
+    logging.info("Trying to upload to S3 file... %s", filename)
+
+    # uploads the file via a managed uploader, which will split up large files automatically and upload in parallel
+    try:
+        s3.upload_file(filepath, bucket_name, filename)
+        logging.info("Upload to S3 OK.")
+        return True
+    except boto3.exceptions.S3UploadFailedError as e:
+        logging.critical("Upload to S3 ERROR.", exc_info=True)
+        return False
+
+
+# Function to move files to errorsDirectory when an error is raised
+def moveFile(filepath, filename):
+    try:
+        os.rename(filepath, errorsDirectory + "/" + filename)
+        logging.error("File moved to /errors: %s", filepath)
+    except OSError as e:
+        logging.critical("Can't move file: %s", filepath, exc_info=True)
 
 
 class EveryNoiseSpider(scrapy.Spider):
@@ -29,14 +49,16 @@ class EveryNoiseSpider(scrapy.Spider):
             yield scrapy.Request(final_url, callback=self.parse_page)
 
     def parse_page(self, response):
+        logging.info("Crawling started...")
         # retrieve date from "date" drop-down menu
         everynoiseDate = response.xpath('//select[@name="date"]/option[@selected]/text()').get()
-        # retrieve country code from the current url
+        # retrieve country code from the current url parameter
         parsed_url = urlparse(response.request.url)
-        countryCode = parse_qs(parsed_url.query)['region'][0] # the list contains only 1 item, the current country code
+        countryCode = parse_qs(parsed_url.query)['region'][0]  # the list contains only 1 item, the current country code
        
-        with open(directory +'/page_' + runDate + '_' + countryCode + '.html', 'wb') as backup_file:
-            backup_file.write(response.body)
+        with open(htmlDirectory +'/page_' + runDate + '_' + countryCode + '.html', 'wb') as html_file:
+            html_file.write(response.body)
+            files_to_handle.append(os.path.basename(html_file.name))  # add html_file filename to files_to_handle list
         
         for albumrow in response.css('div.albumrow'):
             # if a:nth-child(3) contains no text, then the album name is in the child i
@@ -44,7 +66,6 @@ class EveryNoiseSpider(scrapy.Spider):
                 albumName = albumrow.css('a > i::text').get()
             else:
                 albumName = albumrow.css('a:nth-child(3)::text').get()
-            # directly obtain the country code from the region parameter in the current url
             
             yield {
                 'countryCode': countryCode,
@@ -60,7 +81,7 @@ class EveryNoiseSpider(scrapy.Spider):
             }
 
 
-# list to collect all items
+# define list to collect all items
 items = []
 
 
@@ -76,15 +97,61 @@ class EveryNoisePipeline(object):
 # settings
 process = CrawlerProcess(settings={
     'ITEM_PIPELINES': {'everynoise.EveryNoisePipeline': 300},
+    'LOG_LEVEL' : 'INFO',
 })
 
+# define directories
+directory = "output"
+htmlDirectory = "html_dumbs"
+errorsDirectory = "errors"
+try:
+    os.makedirs(directory)
+except FileExistsError:
+    pass  # directory already exists
+try:
+    os.makedirs(htmlDirectory)
+except FileExistsError:
+    pass  # directory already exists
+try:
+    os.makedirs(errorsDirectory)
+except FileExistsError:
+    pass  # directory already exists
 
+# define timestamps
+runUnix = int(time.time())
+runDate = datetime.now().strftime("%Y%m%d")
+
+# define empty list for file names that needs to be handled
+files_to_handle = []
+
+# create an S3 client and configure from shell
+s3 = boto3.client("s3")
+bucket_name = "andreantonacci"
+
+# launch the spider
 process.crawl(EveryNoiseSpider)
 process.start()  # the script will block here until the crawling is finished
 
 # write output file
-with io.open("everynoise_newreleases_" + runDate + ".json", "w", encoding="UTF-8") as json_output:
+with io.open(directory + "/everynoise_newreleases_" + runDate + ".json", "w", encoding="UTF-8") as json_output:
     for item in items:  # loop through objects to add new lines between them
         json.dump(item, json_output, ensure_ascii=False)
         json_output.write("\n")  # add new line for the next object
-    print("File written.")
+    logging.info("File written.")
+    files_to_handle.append(os.path.basename(json_output.name))  # append json_output filename to files_to_handle list
+
+# upload all json files to S3
+for file in os.scandir(directory):
+    if file.name.endswith(".json") and file.name in files_to_handle:  # only upload files from the current crawling
+        uploadResult = uploadToS3(file.path, file.name)
+        if uploadResult is False:
+            moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
+        logging.info("All done with json files.")
+
+# upload all html files from htmlDirectory to S3
+for file in os.scandir(htmlDirectory):
+    if file.name.endswith(".html") and file.name in files_to_handle:  # only upload files from the current crawling
+        uploadResult = uploadToS3(file.path, "html_dumbs/"+file.name)
+        if uploadResult is False:
+            moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
+        logging.info("All done with html files.")
