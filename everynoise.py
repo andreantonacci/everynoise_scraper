@@ -28,7 +28,7 @@ def uploadToS3(filepath, filename):
         return False
 
 
-# Function to move files to errorsDirectory when an error is raised
+# function to move files to errorsDirectory when an error is raised
 def moveFile(filepath, filename):
     try:
         os.rename(filepath, errorsDirectory + "/" + filename)
@@ -40,33 +40,33 @@ def moveFile(filepath, filename):
 class EveryNoiseSpider(scrapy.Spider):
     name = "releases"
     start_urls = ['http://everynoise.com/new_releases_by_genre.cgi?region=']
-    
+
     def parse(self, response):
         for region in response.xpath('//select[@name="region"]/option'):
-            # reconstruct the url using the country code parameter obtained from the "region" drop-down menu
+            # reconstruct the url using the country code obtained from the "region" drop-down menu
             final_url = self.start_urls[0] + region.css('option::attr(value)').get() + "&albumsonly=&style=cards&date=&genre=anygenre&artistsfrom="
-            # final_url = self.start_urls[0] + "US" + "&albumsonly=&style=cards&date=&genre=anygenre&artistsfrom="  # Un comment for US only - use it to debug
+            # final_url = self.start_urls[0] + "US" + "&albumsonly=&style=cards&date=&genre=anygenre&artistsfrom="  # Uncomment for US only - use it to debug
             yield scrapy.Request(final_url, callback=self.parse_page)
 
     def parse_page(self, response):
         logging.info("Crawling started...")
         # retrieve date from "date" drop-down menu
-        everynoiseDate = response.xpath('//select[@name="date"]/option[@selected]/text()').get()
+        everyNoiseDate = response.xpath('//select[@name="date"]/option[@selected]/text()').get()
         # retrieve country code from the current url parameter
         parsed_url = urlparse(response.request.url)
         countryCode = parse_qs(parsed_url.query)['region'][0]  # the list contains only 1 item, the current country code
-       
+
         with open(htmlDirectory +'/page_' + runDate + '_' + countryCode + '.html', 'wb') as html_file:
             html_file.write(response.body)
             files_to_handle.append(os.path.basename(html_file.name))  # add html_file filename to files_to_handle list
-        
+
         for albumrow in response.css('div.albumrow'):
             # if a:nth-child(3) contains no text, then the album name is in the child i
             if albumrow.css('a:nth-child(3)::text').get() is None:
                 albumName = albumrow.css('a > i::text').get()
             else:
                 albumName = albumrow.css('a:nth-child(3)::text').get()
-            
+
             yield {
                 'countryCode': countryCode,
                 'trackId': albumrow.css('span.play::attr(trackid)').get(),
@@ -77,7 +77,7 @@ class EveryNoiseSpider(scrapy.Spider):
                 'albumName': albumName,
                 'scrapeUnix': runUnix,
                 'scrapeDate': runDate,
-                'everynoiseDate': everynoiseDate,
+                'everyNoiseDate': everyNoiseDate,
             }
 
 
