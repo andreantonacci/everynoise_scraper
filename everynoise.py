@@ -12,6 +12,8 @@ import logging
 # enable logging
 logging.basicConfig(level=logging.INFO, filename="everynoise_newreleases_logs.log", filemode="a", format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
+bucket_name = "uvt-streaming-data"
+bucket_dir = 'everynoise/new-releases/'
 
 # function to backup on S3
 def uploadToS3(filepath, filename):
@@ -104,6 +106,7 @@ process = CrawlerProcess(settings={
 directory = "output"
 htmlDirectory = "html_dumbs"
 errorsDirectory = "errors"
+
 try:
     os.makedirs(directory)
 except FileExistsError:
@@ -126,7 +129,6 @@ files_to_handle = []
 
 # create an S3 client and configure from shell
 s3 = boto3.client("s3")
-bucket_name = "andreantonacci"
 
 # launch the spider
 process.crawl(EveryNoiseSpider)
@@ -143,7 +145,7 @@ with io.open(directory + "/everynoise_newreleases_" + runDate + ".json", "w", en
 # upload all json files to S3
 for file in os.scandir(directory):
     if file.name.endswith(".json") and file.name in files_to_handle:  # only upload files from the current crawling
-        uploadResult = uploadToS3(file.path, file.name)
+        uploadResult = uploadToS3(file.path, bucket_dir+file.name)
         if uploadResult is False:
             moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
         logging.info("All done with json files.")
@@ -151,7 +153,7 @@ for file in os.scandir(directory):
 # upload all html files from htmlDirectory to S3
 for file in os.scandir(htmlDirectory):
     if file.name.endswith(".html") and file.name in files_to_handle:  # only upload files from the current crawling
-        uploadResult = uploadToS3(file.path, "html_dumbs/"+file.name)
+        uploadResult = uploadToS3(file.path, bucket_dir+"html_dumbs/"+file.name)
         if uploadResult is False:
             moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
         logging.info("All done with html files.")
