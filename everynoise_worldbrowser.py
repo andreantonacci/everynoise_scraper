@@ -12,6 +12,9 @@ import logging
 # enable logging
 logging.basicConfig(level=logging.INFO, filename="everynoise_worldbrowser_logs.log", filemode="a", format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
+bucket_name = "uvt-streaming-data"
+bucket_dir = 'everynoise/worldbrowser/'
+
 
 # function to backup on S3
 def uploadToS3(filepath, filename):
@@ -41,6 +44,11 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
     name = "worldbrowser"
     start_urls = ['http://everynoise.com/worldbrowser.cgi?section=']
     
+    rate = .25
+    
+    def __init__(self):
+        self.download_delay = 1/float(self.rate)
+    
     def parse(self, response):
         for section in response.xpath('//select[@name="section"]/option'):
             # reconstruct the url using the section name and hour - if available - from drop-down
@@ -63,7 +71,7 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
         sectionName = parse_qs(parsed_url.query)['section'][0]  # the list contains only 1 item, the current section
         everyNoiseHourReference = parse_qs(parsed_url.query)['hours'][0]
        
-        with open(htmlDirectory +'/worldbrowser_page_' + runDate + '_' + sectionName + '.html', 'wb') as html_file:
+        with open(htmlDirectory +'/worldbrowser_page_' + runDate + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
             html_file.write(response.body)
             files_to_handle.append(os.path.basename(html_file.name))  # add html_file filename to files_to_handle list
         
@@ -119,20 +127,20 @@ except FileExistsError:
 # define timestamps
 runUnix = int(time.time())
 runDate = datetime.now().strftime("%Y%m%d")
+runTS = datetime.now().strftime("%Y%m%d_%H%M")
 
 # define empty list for file names that needs to be handled
 files_to_handle = []
 
 # create an S3 client and configure from shell
 s3 = boto3.client("s3")
-bucket_name = "andreantonacci"
 
 # launch the spider
 process.crawl(EveryNoiseWorldBrowserSpider)
 process.start()  # the script will block here until the crawling is finished
 
 # write output file
-with io.open(directory + "/everynoise_worldbrowser_" + runDate + ".json", "w", encoding="UTF-8") as json_output:
+with io.open(directory + "/everynoise_worldbrowser_" + runTS + ".json", "w", encoding="UTF-8") as json_output:
     for item in items:  # loop through objects to add new lines between them
         json.dump(item, json_output, ensure_ascii=False)
         json_output.write("\n")  # add new line for the next object
@@ -142,7 +150,7 @@ with io.open(directory + "/everynoise_worldbrowser_" + runDate + ".json", "w", e
 # upload all json files to S3
 for file in os.scandir(directory):
     if file.name.endswith(".json") and file.name in files_to_handle:  # only upload files from the current crawling
-        uploadResult = uploadToS3(file.path, file.name)
+        uploadResult = uploadToS3(file.path, bucket_dir+file.name)
         if uploadResult is False:
             moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
         logging.info("All done with json files.")
@@ -150,7 +158,7 @@ for file in os.scandir(directory):
 # upload all html files from htmlDirectory to S3
 for file in os.scandir(htmlDirectory):
     if file.name.endswith(".html") and file.name in files_to_handle:  # only upload files from the current crawling
-        uploadResult = uploadToS3(file.path, "html_dumbs/"+file.name)
+        uploadResult = uploadToS3(file.path, bucket_dir+"html_dumbs/"+file.name)
         if uploadResult is False:
             moveFile(file.path, file.name)  # move file to errorsDirectory if an error is raised
         logging.info("All done with html files.")
