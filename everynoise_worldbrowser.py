@@ -52,10 +52,16 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
     def parse(self, response):
         for section in response.xpath('//select[@name="section"]/option'):
             # reconstruct the url using the section name and hour - if available - from drop-down
-            for hour in response.xpath('//select[@name="hours"]/option'):
-                final_url = self.start_urls[0] + section.css('option::attr(value)').get() + "&hours=" + hour.css('option::attr(value)').get()
-                # final_url = self.start_urls[0] + "featured" + "&hours=" + hour.css('option::attr(value)').get()  # Uncomment for featured only - use it to debug
-                # final_url = self.start_urls[0] + "featured" + "&hours=0"  # Uncomment for featured only - use it to debug
+            section_name=section.css('option::attr(value)').get()
+            
+            if (section_name=='featured'):
+                for hour in response.xpath('//select[@name="hours"]/option'):
+                    final_url = self.start_urls[0] + section.css('option::attr(value)').get() + "&hours=" + hour.css('option::attr(value)').get()
+                    # final_url = self.start_urls[0] + "featured" + "&hours=" + hour.css('option::attr(value)').get()  # Uncomment for featured only - use it to debug
+                    # final_url = self.start_urls[0] + "featured" + "&hours=0"  # Uncomment for featured only - use it to debug
+                    yield scrapy.Request(final_url, callback=self.parse_page)
+            else:
+                final_url = self.start_urls[0] + section.css('option::attr(value)').get() + '&hours=0'
                 yield scrapy.Request(final_url, callback=self.parse_page)
 
     def parse_page(self, response):
@@ -69,7 +75,10 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
         # retrieve section name from the current url parameter
         parsed_url = urlparse(response.request.url)
         sectionName = parse_qs(parsed_url.query)['section'][0]  # the list contains only 1 item, the current section
-        everyNoiseHourReference = parse_qs(parsed_url.query)['hours'][0]
+        try:
+            everyNoiseHourReference = parse_qs(parsed_url.query)['hours'][0]
+        except:
+            everyNoiseHourReference = 'NA'
        
         with open(htmlDirectory +'/worldbrowser_page_' + runDate + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
             html_file.write(response.body)
