@@ -80,7 +80,7 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
         except:
             everyNoiseHourReference = 'NA'
        
-        with open(htmlDirectory +'/worldbrowser_page_' + runDate + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
+        with open(htmlDirectory +'/worldbrowser_page_' + runTS + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
             html_file.write(response.body)
             files_to_handle.append(os.path.basename(html_file.name))  # add html_file filename to files_to_handle list
         
