@@ -10,10 +10,10 @@ import boto3
 import logging
 
 # enable logging
-logging.basicConfig(level=logging.INFO, filename="everynoise_worldbrowser_logs.log", filemode="a", format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+logging.basicConfig(level=logging.INFO, filename="spotifycharts.log", filemode="a", format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
 bucket_name = "uvt-streaming-data"
-bucket_dir = 'everynoise/worldbrowser/'
+bucket_dir = 'spotifycharts/'
 
 
 # function to backup on S3
@@ -40,9 +40,9 @@ def moveFile(filepath, filename):
         logging.critical("Can't move file: %s", filepath, exc_info=True)
 
 
-class EveryNoiseWorldBrowserSpider(scrapy.Spider):
-    name = "worldbrowser"
-    start_urls = ['http://everynoise.com/worldbrowser.cgi?section=']
+class SpotifyCharts(scrapy.Spider):
+    name = "spotifycharts"
+    start_urls = ['https://spotifycharts.com/regional']
     
     rate = .25
     
@@ -80,7 +80,7 @@ class EveryNoiseWorldBrowserSpider(scrapy.Spider):
         except:
             everyNoiseHourReference = 'NA'
        
-        with open(htmlDirectory +'/worldbrowser_page_' + runTS + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
+        with open(htmlDirectory +'/worldbrowser_page_' + runDate + '_' + sectionName + '_'+ str(everyNoiseHour).replace(':','')+'.html', 'wb') as html_file:
             html_file.write(response.body)
             files_to_handle.append(os.path.basename(html_file.name))  # add html_file filename to files_to_handle list
         
