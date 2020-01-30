@@ -35,17 +35,17 @@ The two webscrapers write the output of the data collections to JSON files.
 
 (1) **New releases**
 
-The data is written to new-line separated JSON files, named everynoise_newreleases_YYYYMMDD.json (whereas YYYYMMDD refers to the datestamp when the scraper was run.
+The data is written to new-line separated JSON files, named everynoise_newreleases_YYYYMMDD.json (whereas YYYYMMDD refers to the datestamp when the scraper was run. It lists the weekly releases to the Spotify platform by country. Each release is characterized by an albumId/albumName, and and associated artistName/artistId. The trackId in the data below represents a preview snipped of the album that users can click to listen to (a part) of the release. Singles are released as single-track albums.
 
 *JSON file structure*
 
 ``` 
 {
   "countryCode": "EC", # two-letter country code
-  "trackId": "spotify:track:2rRhbOTbTwAUq45qdllfST", # Spotify track ID of track
-  "artistId": "spotify:artist:07YUOmWljBTXwIseAUd9TW", # Spotify artist ID associated with track
-  "rank": "EC rank: 10", # 
-  "artistName": "Sebastián Yatra", # Artist name
+  "trackId": "spotify:track:2rRhbOTbTwAUq45qdllfST", # Spotify track ID of a preview track of the album release
+  "artistId": "spotify:artist:07YUOmWljBTXwIseAUd9TW", # Spotify artist ID of the album release
+  "rank": "EC rank: 10", # Rank (probably popularity rank; exact definition is pending)
+  "artistName": "Sebastián Yatra", # Artist name associated with album release
   "albumId": "spotify:album:2B4n5Uy0rYJ1btdqtUsrw8", # Spotify album ID
   "albumName": "Un Año (En Vivo)", # Album name
   "scrapeUnix": 1570447279, # Unix time stamp when the data was scraped
