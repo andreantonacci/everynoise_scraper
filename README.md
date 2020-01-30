@@ -9,11 +9,13 @@ This repository contains two webscrapers to collect data from everynoise.com.
 
 *The data is scraped from everynoise.com/new_releases_by_genre.cgi.*
 
-(2) **Worldbrowser**: A list of "promoted"/"featured" playlists on Spotify, by playlist category, hour-of-the-day (if available), and country
+(2) **Worldbrowser**: A list of "promoted"/"featured" playlists on Spotify, by playlist category, hour-of-the-day (if available), and country.
 
 ![Screenshot](/doc/everynoise_worldbrowser.png)
 
-*The data is collected from everynoise.com/worldbrowser.cgi.*
+While the data is collected from everynoise.com/worldbrowser.cgi, the data *actually* comes directly from the Spotify Web API, which powers the *browse* interface of the Spotify platform.
+
+![Screenshot of the playlist browse feature on Spotify](/doc/spotify_browse.png)
 
 ## Collecting the raw data
 
