@@ -1,26 +1,66 @@
 # Scraper for everynoise.com
 
-## Installation
-- Install Python distribution via Anaconda
-- Install scrapy (toolkit for webscraping)
-`pip install scrapy` 
+## Overview
 
-## Running
+This repository contains two webscrapers to collect data from everynoise.com. 
+
+(1) **New releases**: A list of (weekly) album and single releases to Spotify, by country
+![Screenshot](/doc/everynoise_newrelease_by_genre.png)
+
+*The data is scraped from everynoise.com/new_releases_by_genre.cgi.*
+
+(2) **Worldbrowser**: A list of "promoted"/"featured" playlists on Spotify, by playlist category, hour-of-the-day (if available), and country
+
+![Screenshot](/doc/everynoise_worldbrowser.png)
+
+*The data is collected from everynoise.com/worldbrowser.cgi.*
+
+## Collecting the raw data
+
+First, please install...
+- Python distribution via Anaconda
+- Scrapy (toolkit for webscraping)
+  `pip install scrapy` 
+
+Then, you can run the data collections:
 - Run everynoise.py file (weekly)
 `python everynoise.py`
 
 - Run everynoise_worldbrowser.py file (hourly)
 `python everynoise_worldbrowser.py`
 
-## Content of web scraper
+## Documentation of output
 
-### Weekly releases to Spotify, by country
-![Screenshot](/doc/everynoise_newrelease_by_genre.png)
+The two webscrapers write the output of the data collections to JSON files.
 
-### Spotify World browser; featured playlists by category (hour if available), and country
-![Screenshot](/doc/everynoise_worldbrowser.png)
+(1) **New releases**
 
-**Documentation of JSON file structure**
+The data is written to new-line separated JSON files, named everynoise_newreleases_YYYYMMDD.json (whereas YYYYMMDD refers to the datestamp when the scraper was run.
+
+*JSON file structure*
+
+``` 
+{
+  "countryCode": "EC", # two-letter country code
+  "trackId": "spotify:track:2rRhbOTbTwAUq45qdllfST", # Spotify track ID of track
+  "artistId": "spotify:artist:07YUOmWljBTXwIseAUd9TW", # Spotify artist ID associated with track
+  "rank": "EC rank: 10", # 
+  "artistName": "Sebastián Yatra", # Artist name
+  "albumId": "spotify:album:2B4n5Uy0rYJ1btdqtUsrw8", # Spotify album ID
+  "albumName": "Un Año (En Vivo)", # Album name
+  "scrapeUnix": 1570447279, # Unix time stamp when the data was scraped
+  "scrapeDate": "20191007", # Datestamp when the data was scraped
+  "everynoiseDate": "20191004" # Date when track/album was released to Spotify
+}
+
+``` 
+
+(2) **Worldbrowser**
+
+The data is written to new-line separated JSON files, named everynoise_worldbrowser_YYYYMMDD__HHMM.json (whereas YYYYMMDD refers to the datestamp, and HHMM to the hour-minute timestamp when the scraper was run.
+
+
+*JSON file structure*
 
 ```
 {
